@@ -10,6 +10,7 @@ use bevy_reflect::{impl_reflect_value, FromType, Reflect, ReflectDeserialize};
 #[derive(Clone)]
 pub struct ReflectComponent {
     add_component: fn(&mut World, Entity, &dyn Reflect),
+    remove_component: fn(&mut World, Entity, &dyn Reflect),
     apply_component: fn(&mut World, Entity, &dyn Reflect),
     reflect_component: fn(&World, Entity) -> Option<&dyn Reflect>,
     reflect_component_mut: unsafe fn(&World, Entity) -> Option<ReflectMut>,
@@ -23,6 +24,10 @@ impl ReflectComponent {
 
     pub fn apply_component(&self, world: &mut World, entity: Entity, component: &dyn Reflect) {
         (self.apply_component)(world, entity, component);
+    }
+
+    pub fn remove_component(&self, world: &mut World, entity: Entity, component: &dyn Reflect) {
+        (self.add_component)(world, entity, component);
     }
 
     pub fn reflect_component<'a>(
@@ -79,6 +84,9 @@ impl<C: Component + Reflect + FromWorld> FromType<C> for ReflectComponent {
                 let mut component = C::from_world(world);
                 component.apply(reflected_component);
                 world.entity_mut(entity).insert(component);
+            },
+            remove_component: |world, entity, reflected_component| {
+                world.entity_mut(entity).remove::<C>();
             },
             apply_component: |world, entity, reflected_component| {
                 let mut component = world.get_mut::<C>(entity).unwrap();
