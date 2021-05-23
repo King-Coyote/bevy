@@ -10,7 +10,8 @@ use bevy_reflect::{impl_reflect_value, FromType, Reflect, ReflectDeserialize};
 #[derive(Clone)]
 pub struct ReflectComponent {
     add_component: fn(&mut World, Entity, &dyn Reflect),
-    remove_component: fn(&mut World, Entity, &dyn Reflect),
+    create_component: fn(&mut World, Entity),
+    remove_component: fn(&mut World, Entity),
     apply_component: fn(&mut World, Entity, &dyn Reflect),
     reflect_component: fn(&World, Entity) -> Option<&dyn Reflect>,
     reflect_component_mut: unsafe fn(&World, Entity) -> Option<ReflectMut>,
@@ -22,8 +23,8 @@ impl ReflectComponent {
         (self.add_component)(world, entity, component);
     }
 
-    pub fn remove_component(&self, world: &mut World, entity: Entity, component: &dyn Reflect) {
-        (self.remove_component)(world, entity, component);
+    pub fn create_component(&self, world: &mut World, entity: Entity) {
+        (self.create_component)(world, entity);
     }
 
     pub fn apply_component(&self, world: &mut World, entity: Entity, component: &dyn Reflect) {
@@ -61,6 +62,10 @@ impl ReflectComponent {
         (self.reflect_component_mut)(world, entity)
     }
 
+    pub fn remove_component(&self, world: &mut World, entity: Entity) {
+        (self.remove_component)(world, entity);
+    }
+
     pub fn copy_component(
         &self,
         source_world: &World,
@@ -85,7 +90,11 @@ impl<C: Component + Reflect + FromWorld> FromType<C> for ReflectComponent {
                 component.apply(reflected_component);
                 world.entity_mut(entity).insert(component);
             },
-            remove_component: |world, entity, reflected_component| {
+            create_component: |world, entity| {
+                world.entity_mut(entity)
+                    .insert(C::from_world(world));
+            },
+            remove_component: |world, entity| {
                 world.entity_mut(entity).remove::<C>();
             },
             apply_component: |world, entity, reflected_component| {
