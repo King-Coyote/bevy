@@ -91,8 +91,8 @@ impl<C: Component + Reflect + FromWorld> FromType<C> for ReflectComponent {
                 world.entity_mut(entity).insert(component);
             },
             create_component: |world, entity| {
-                world.entity_mut(entity)
-                    .insert(C::from_world(world));
+                let mut component = C::from_world(world);
+                world.entity_mut(entity).insert(component);
             },
             remove_component: |world, entity| {
                 world.entity_mut(entity).remove::<C>();
